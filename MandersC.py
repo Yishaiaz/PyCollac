@@ -1,8 +1,6 @@
 import numpy as np
-import math
-import matplotlib.pyplot as plt
 import pandas as pd
-import cv2 as cv
+from vectorPreProcess import vectorsPreProcces as vpp
 
 
 class MandersC:
@@ -11,27 +9,34 @@ class MandersC:
         self.is_objects = is_objects
         self.z_levels = z_levels
         self.intensity_feature_name = intensity_feature_name
+        self.vpp = vpp()
 
-    def calc_m_for_single_file(self, v1: pd.DataFrame, v2: pd.DataFrame):
-        vpp = vectorsPreProcces()
-        v1, v2 = vpp.same_length_vectors(v1.loc[:, ['X', 'Y', 'Z', self.intensity_feature_name]],
+    def calc_m_for_single_file(self, v1: pd.DataFrame, v2: pd.DataFrame, split_z_axis: bool = True):
+        v1, v2 = self.vpp.same_length_vectors(v1.loc[:, ['X', 'Y', 'Z', self.intensity_feature_name]],
                                          v2.loc[:, ['X', 'Y', 'Z', self.intensity_feature_name]])
-        coeff_for_z_level = list()
-        if self.is_objects:
-            mc = self.MandersCoeffForObjects(self.intensity_feature_name)
-            for i in range(0, len(self.z_levels) - 1):
-                v1_trimmed = v1.loc[(v1['Z'] >= self.z_levels[i]) * (v1['Z'] < self.z_levels[i + 1])]
-                v2_trimmed = v2.loc[(v2['Z'] >= self.z_levels[i]) * (v2['Z'] < self.z_levels[i + 1])]
-                v1_trimmed, v2_trimmed = vpp.same_length_vectors(v1_trimmed, v2_trimmed)
-                coeff_for_z_level.append(mc.calc_m(v1_trimmed, v2_trimmed))
-            return coeff_for_z_level
+        if split_z_axis:
+            coeff_for_z_level = list()
+            if self.is_objects:
+                mc = self.MandersCoeffForObjects(self.intensity_feature_name)
+                for i in range(0, len(self.z_levels) - 1):
+                    v1_trimmed = v1.loc[(v1['Z'] >= self.z_levels[i]) * (v1['Z'] < self.z_levels[i + 1])]
+                    v2_trimmed = v2.loc[(v2['Z'] >= self.z_levels[i]) * (v2['Z'] < self.z_levels[i + 1])]
+                    v1_trimmed, v2_trimmed = self.vpp.same_length_vectors(v1_trimmed, v2_trimmed)
+                    coeff_for_z_level.append(mc.calc_m(v1_trimmed, v2_trimmed))
+                return coeff_for_z_level
+            else:
+                mc = self.MandersCoeffForPixels()
+                return mc.calc_m(v1, v2, channels_to_consider=(1, 2))
         else:
-            mc = self.MandersCoeffForPixels()
-            return mc.calc_m(v1, v2, channels_to_consider=(1, 2))
+            if self.is_objects:
+                mc = self.MandersCoeffForObjects(self.intensity_feature_name)
+                return mc.calc_m(v1, v2)
+            else:
+                mc = self.MandersCoeffForPixels()
+                return mc.calc_m(v1, v2, channels_to_consider=(1, 2))
 
     def calc_MOC_for_single_file(self, v1: pd.DataFrame, v2: pd.DataFrame):
-        vpp = vectorsPreProcces()
-        v1, v2 = vpp.same_length_vectors(v1.loc[:, ['X', 'Y', 'Z', self.intensity_feature_name]],
+        v1, v2 = self.vpp.same_length_vectors(v1.loc[:, ['X', 'Y', 'Z', self.intensity_feature_name]],
                                          v2.loc[:, ['X', 'Y', 'Z', self.intensity_feature_name]])
         coeff_for_z_level = list()
         if self.is_objects:
@@ -39,7 +44,7 @@ class MandersC:
             for i in range(0, len(self.z_levels) - 1):
                 v1_trimmed = v1.loc[(v1['Z'] >= self.z_levels[i]) * (v1['Z'] < self.z_levels[i + 1])]
                 v2_trimmed = v2.loc[(v2['Z'] >= self.z_levels[i]) * (v2['Z'] < self.z_levels[i + 1])]
-                v1_trimmed, v2_trimmed = vpp.same_length_vectors(v1_trimmed, v2_trimmed)
+                v1_trimmed, v2_trimmed = self.vpp.same_length_vectors(v1_trimmed, v2_trimmed)
                 coeff_for_z_level.append(mc.calc_MOC(v1_trimmed, v2_trimmed))
             return coeff_for_z_level
         else:
@@ -85,22 +90,4 @@ class MandersC:
                 np.sum(np.power(v2.values, 2, dtype="float")))
             return total_nom / total_denom
 
-
-class vectorsPreProcces:
-
-    def same_length_vectors(self, v1:pd.DataFrame, v2:pd.DataFrame):
-        if len(v1) > len(v2):
-            new_array = np.zeros(shape=v1.shape)
-            new_array[:len(v2)] = v2.copy()
-
-            return v1, pd.DataFrame(new_array, columns=v1.columns)
-
-        elif len(v2) > len(v1):
-            new_array = np.zeros(shape=v2.shape)
-            new_array[:len(v1)] = v1.copy()
-
-            return v2, pd.DataFrame(new_array, columns=v2.columns)
-
-        else:
-            return v1, v2
 
