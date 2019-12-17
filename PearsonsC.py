@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from vectorPreProcess import vectorsPreProcces as vpp
 
+
 class PearsonC:
 
     def __init__(self, is_objects: bool = True, z_levels: list = list([1, 2, 3, 4]), intensity_feature_name: str = "IntDen"):
@@ -32,8 +33,8 @@ class PearsonC:
         total_average_v1_pixels = np.average(v1_objects_intensities)
         total_average_v2_pixels = np.average(v2_objects_intensities)
 
-        im1_pixels_intensities_average_subtracted = v1_objects_intensities - total_average_v1_pixels
         im2_pixels_intensities_average_subtracted = v2_objects_intensities - total_average_v2_pixels
+        im1_pixels_intensities_average_subtracted = v1_objects_intensities - total_average_v1_pixels
 
         nom = np.sum(im1_pixels_intensities_average_subtracted * im2_pixels_intensities_average_subtracted)
         denom = np.sqrt(np.sum(np.power(im1_pixels_intensities_average_subtracted, 2, dtype="float"),
